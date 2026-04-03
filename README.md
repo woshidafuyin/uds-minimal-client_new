@@ -1,3 +1,41 @@
+{
+  "task": "修复Leap 3.31在27阶段的偶发成功/失败问题，优先消除并发发送竞争",
+  "files": [
+    {
+      "file": "src/uds_canoe_tool/transports/isotp_python_can.py",
+      "function": "PythonCanIsoTpTransport / Wake600Sender",
+      "todo": [
+        "定位 enable_wake_600=True 时 phys/func transport 各自启动 Wake600 线程的代码",
+        "在 Leap 3.31 的 10 02 -> 27 11 -> 27 12 临界阶段，禁止 Wake600 周期线程并发发送",
+        "优先实现最小方案：在该临界阶段临时 pause/disable phys.Wake600 和 func.Wake600，27 完成后再恢复",
+        "不要修改 SharedBus 复用逻辑本身，先只消除 27 段的并发发送"
+      ]
+    },
+    {
+      "file": "src/uds_canoe_tool/projects/leap_331/leap_331_flow.py",
+      "function": "10 02 -> 0x771 -> 27链路",
+      "todo": [
+        "将 10 02 -> 0x771 -> 27 11 -> 27 12 视为一个临界区",
+        "进入临界区前暂停 Wake600 并发发送源",
+        "保持当前 keygen 路径不变",
+        "保持当前 27 恢复策略不变（0x37/0x36/0x35）",
+        "在日志中明确打印：Wake600 paused / Wake600 resumed / entering 27 critical section"
+      ]
+    }
+  ],
+  "rules": [
+    "先不要改 keygen 实现",
+    "先不要大改 transport 架构",
+    "先不要同时引入多项时序改动，优先验证“禁掉27段Wake600竞争”这一项",
+    "修改必须可观测，日志里要能确认 27 段期间没有 0x600 周期报文并发"
+  ],
+  "accept": [
+    "27 段期间日志中不再出现 Wake600 周期发送",
+    "27 11/27 12 成功率明显提升，不再出现“啥都没改又随机成败”",
+    "若问题仍存在，再进入下一轮只对齐 10 02 后等待/771 payload/3E80 时机"
+  ]
+}
+
 # 🚗 UDS Python 刷写工具（CAPL 对齐版）
 
 基于 Python 实现的 UDS 刷写脚本，目标不是“只要能刷写成功”，而是：
